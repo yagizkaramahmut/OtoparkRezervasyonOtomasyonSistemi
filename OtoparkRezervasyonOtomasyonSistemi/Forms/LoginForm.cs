@@ -95,7 +95,9 @@ namespace OtoparkRezervasyonOtomasyonSistemi
 
         private void lblKayitOl_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Kayýt olma ekranýna yönlendiriliyorsunuz!", "Bilgi");
+            RegisterForm kayitFormu = new RegisterForm();
+            kayitFormu.Show();
+            this.Hide();
         }
 
         private void btnGiris_Click(object sender, EventArgs e)
@@ -113,13 +115,13 @@ namespace OtoparkRezervasyonOtomasyonSistemi
             {
                 using (SqlConnection conn = new DbConnection().GetConnection())
                 {
-                    // HATA GÝDERME: Baðlantý zaten açýksa tekrar açma
                     if (conn.State == System.Data.ConnectionState.Closed)
                     {
                         conn.Open();
                     }
 
-                    string query = "SELECT RolID, Ad, Soyad FROM Kullanicilar WHERE Email = @mail AND Password = @pass";
+                    // DÝKKAT: KullaniciID ve Email verilerini de SQL'den çekiyoruz ki hafýzaya yazabilelim!
+                    string query = "SELECT KullaniciID, RolID, Ad, Soyad, Email FROM Kullanicilar WHERE Email = @mail AND Password = @pass";
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@mail", email);
                     cmd.Parameters.AddWithValue("@pass", sifre);
@@ -131,23 +133,30 @@ namespace OtoparkRezervasyonOtomasyonSistemi
                         int rolId = Convert.ToInt32(reader["RolID"]);
                         string adSoyad = reader["Ad"].ToString() + " " + reader["Soyad"].ToString();
 
-                        MessageBox.Show($"Hoþ geldin {adSoyad}!", "Giriþ Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        // --- YENÝ EKLENEN SESSION (OTURUM) KODLARI ---
+                        // Artýk sistem içeri giren kiþinin kim olduðunu unutmayacak
+                        OturumBilgi.KullaniciID = Convert.ToInt32(reader["KullaniciID"]);
+                        OturumBilgi.AdSoyad = adSoyad;
+                        OturumBilgi.Email = reader["Email"].ToString();
+                        OturumBilgi.RolID = rolId;
+                        // ---------------------------------------------
 
                         // ÞART 1: Rol Bazlý Yönlendirme
-                        if (rolId == 1) // Admin
+                        if (rolId == 1) // Admin (Yönetici)
                         {
-                            MessageBox.Show("Admin Paneli Açýlýyor...");
-                            // FormAdmin admin = new FormAdmin();
-                            // admin.Show();
+                            // Mesajda OturumBilgi sýnýfýndan gelen ismi kullanýyoruz
+                            MessageBox.Show($"Hoþ geldin Patron {OturumBilgi.AdSoyad}! Yönetim Paneli Açýlýyor...", "Giriþ Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            AdminForm adminForm = new AdminForm();
+                            adminForm.Show();
                         }
                         else // Müþteri
                         {
-                            MessageBox.Show("Müþteri Paneli Açýlýyor...");
-                            // FormMusteri musteri = new FormMusteri();
-                            // musteri.Show();
-                        }
+                            MessageBox.Show($"Hoþ geldin {OturumBilgi.AdSoyad}! Müþteri Paneli Açýlýyor...", "Giriþ Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        this.Hide();
+                            MusteriForm musteriForm = new MusteriForm();
+                            musteriForm.Show();
+                        }
                     }
                     else
                     {
